@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let currentIndex = 0;
         let interval;
-        let isVisible = true; // Assume visível inicialmente
+        let isVisible = true;
 
         const updateSlider = (index) => {
             currentIndex = index;
@@ -88,7 +88,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 6000);
         };
 
-        // Observer para pausar quando sair da tela
         if ('IntersectionObserver' in window) {
             const observer = new IntersectionObserver((entries) => {
                 isVisible = entries[0].isIntersecting;
@@ -111,12 +110,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ==========================================
-    // 4. GALERIA HÍBRIDA (CLOUDINARY + GITHUB)
+    // 4. GALERIA HÍBRIDA (CORRIGIDA - IGNORA ERRO 404)
     // ==========================================
     const initGallery = async () => {
         
-        // --- SEUS DADOS DO GITHUB ---
-        // Mesmo sem imagens lá agora, mantenha configurado para o futuro.
+        // --- CONFIGURAÇÃO (Futura) ---
         const REPO_CONFIG = {
             owner: 'SEU_USUARIO_GITHUB', 
             repo: 'NOME_DO_REPOSITORIO',
@@ -124,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
             branch: 'main'
         };
 
-        // --- SUAS IMAGENS ORIGINAIS (CLOUDINARY) ---
+        // --- IMAGENS ATUAIS (Cloudinary) ---
         const staticImages = [
             { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639014/4_vo4miq.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639014/4_vo4miq.jpg', alt: 'Galeria 9' },
             { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639015/5_qnak9q.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639015/5_qnak9q.jpg', alt: 'Galeria 5' },
@@ -151,7 +149,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!elements.grid) return;
 
-        // Inicia com as estáticas
         let galleryData = [...staticImages];
         let renderedCount = 0;
         let lightboxIndex = 0;
@@ -159,15 +156,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const LOAD_STEP = 3;
         const preloadedImages = new Set();
 
-        // Verifica GitHub (Silencioso se falhar)
+        // --- FETCH SEGURO (NÃO MOSTRA ERRO SE FALHAR) ---
         const fetchGitHubImages = async () => {
             try {
                 const url = `https://api.github.com/repos/${REPO_CONFIG.owner}/${REPO_CONFIG.repo}/contents/${REPO_CONFIG.path}?ref=${REPO_CONFIG.branch}`;
                 const response = await fetch(url);
                 
-                // Se der 404 (pasta vazia/não existe), apenas retorna sem erro
-                if (response.status === 404) return;
-                if (!response.ok) return;
+                // SE DER 404 (Pasta não existe), APENAS PARA (Não joga erro na tela)
+                if (response.status === 404) {
+                    console.log('Pasta do GitHub ainda não criada. Usando apenas Cloudinary.');
+                    return; 
+                }
+                
+                if (!response.ok) return; // Outros erros de rede, ignora silenciosamente
 
                 const data = await response.json();
                 
@@ -179,23 +180,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         alt: file.name.replace(/\.[^/.]+$/, "").replace(/-/g, " ")
                     }));
 
-                // Se achou imagens novas, adiciona e atualiza UI
                 if (githubImages.length > 0) {
                     galleryData = [...staticImages, ...githubImages];
                     
-                    // Se o usuário já viu tudo das estáticas, mostra botão "Carregar Mais" para as novas
+                    // Se já exibiu todas as estáticas, mostra o botão para carregar as novas
                     if (renderedCount >= staticImages.length && elements.loadBtn) {
                         elements.loadBtn.style.display = 'inline-block';
                         elements.loadBtn.textContent = 'Carregar Mais';
                     }
                 }
             } catch (error) {
-                // Silêncio é ouro: não polui o console se não configurar o GitHub agora
+                // Se der erro técnico (ex: internet), não faz nada.
+                console.log('Modo Offline/Erro GitHub:', error);
             }
         };
 
         const renderImages = (count) => {
             const total = galleryData.length;
+            // Oculta botão se acabou
             if (renderedCount >= total && renderedCount > 0) {
                  if (elements.loadBtn) elements.loadBtn.style.display = 'none';
                  return;
@@ -232,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
 
-        // --- Lightbox ---
+        // --- Lightbox Logic ---
         elements.grid.addEventListener('click', (e) => {
             const card = e.target.closest('.gallery-item');
             if (card) openLightbox(parseInt(card.dataset.index, 10));
@@ -303,10 +305,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'ArrowRight') navigate(1);
         });
 
-        // 1. Carrega estáticas (Cloudinary) IMEDIATAMENTE
+        // 1. CARREGA IMEDIATAMENTE O CLOUDINARY
         renderImages(INITIAL_LOAD);
         
-        // 2. Verifica GitHub em background (não bloqueia nada se estiver vazio)
+        // 2. Tenta GitHub em segundo plano (Se não achar, fica quieto)
         fetchGitHubImages();
     };
 
@@ -316,7 +318,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initNavbarScroll();
     initMobileMenu();
     
-    // Carregamento inteligente (espera o navegador "respirar")
     if (window.requestIdleCallback) {
         window.requestIdleCallback(() => {
             initGallery();
