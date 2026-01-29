@@ -3,7 +3,7 @@
    ========================================= */
 :root {
     --primary-green: #0a6230;
-    --accent-orange: #ed6124;
+    --accent-orange: #ff7300;
     --text-dark: #333;
     --text-light: #666;
     --bg-light: #f8f9fa;
@@ -547,3 +547,4 @@ img { max-width: 100%; height: auto; display: block; }
     
     .footer-bottom-line { padding-bottom: 120px; }
 }
+
