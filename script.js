@@ -166,6 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
             { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639013/1_qnkqsb.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639013/1_qnkqsb.jpg', alt: 'Extra 2' },
             { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639013/2_r30lbb.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639013/2_r30lbb.jpg', alt: 'Extra 3' },
         ];
+        ];
 
         const elements = {
             grid: document.getElementById('galleryGrid'),
@@ -346,4 +347,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 50);
     }
 });
+
 
