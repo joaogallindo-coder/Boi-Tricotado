@@ -182,7 +182,7 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* Caixa que segura a imagem de fundo */
 .event-image-box {
-    width: 200px;          
+    width: 200px;           
     height: 140px;         
     background-size: cover;
     background-position: center;
@@ -218,52 +218,6 @@ img { max-width: 100%; height: auto; display: block; }
     border-radius: 10px; 
     box-shadow: 0 4px 15px rgba(234, 91, 12, 0.5); 
     letter-spacing: 0.5px;
-}
-
-
-/* =========================================
-   RESPONSIVIDADE - EVENTOS
-   ========================================= */
-@media (max-width: 768px) {
-    
-    /* Transforma o card em coluna (Empilha os itens) */
-    .event-item {
-        flex-direction: column;
-        align-items: stretch; /* Faz os filhos ocuparem a largura total */
-        text-align: center;   /* Centraliza o texto para melhor estética mobile */
-        padding: 20px;
-        gap: 15px;
-    }
-
-    /* Ajusta a caixa da imagem para ocupar 100% da largura do card */
-    .event-image-box {
-        width: 100%;
-        height: 180px; /* Altura fixa para criar um visual de banner */
-        margin-bottom: 10px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* Sombra suave para destacar a imagem */
-    }
-
-    /* Ajuste fino no badge de data para telas pequenas */
-    .event-date-badge {
-        font-size: 1rem;
-        padding: 6px 20px;
-    }
-
-    /* Garante que o texto ocupe o espaço correto */
-    .event-info {
-        width: 100%;
-    }
-
-    .event-info h4 {
-        font-size: 1.3rem; /* Tamanho confortável para leitura */
-    }
-
-    /* Se houver botão dentro do event-info, centraliza ele */
-    .event-info .btn {
-        width: 100%;       /* Botão largura total facilita o toque */
-        max-width: 300px;  /* Mas não deixa ficar gigante */
-        margin-top: 10px;
-    }
 }
 
 .event-item { 
@@ -324,7 +278,6 @@ img { max-width: 100%; height: auto; display: block; }
     width: 100%; 
     min-height: 350px; 
     height: auto; 
-    /* Link atualizado do Cloudinary */
     background-image: url("https://res.cloudinary.com/depfruu0c/image/upload/v1769639017/bg1_pg1onk.jpg"); 
     background-size: cover; 
     background-position: center; 
@@ -333,7 +286,6 @@ img { max-width: 100%; height: auto; display: block; }
     align-items: center; 
     justify-content: center; 
     padding: 60px 20px;
-    /* Melhora performance de renderização */
     transform: translateZ(0);
     will-change: transform;
 }
@@ -368,7 +320,6 @@ img { max-width: 100%; height: auto; display: block; }
     position: relative; 
     z-index: 50; 
     width: 100%;
-    /* Otimização de renderização (corta pintura fora da tela) */
     content-visibility: auto;
     contain-intrinsic-size: 400px; 
 }
@@ -409,7 +360,7 @@ img { max-width: 100%; height: auto; display: block; }
     border-radius: 8px; 
     overflow: hidden; 
     box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
-    background: #e0e0e0; /* Fundo cinza enquanto carrega */
+    background: #e0e0e0; 
     position: relative;
 }
 
@@ -464,7 +415,119 @@ img { max-width: 100%; height: auto; display: block; }
 }
 .footer-bottom-line p { margin: 0; color: #fff; }
 
-/* Responsividade */
+/* =========================================
+   RESPONSIVIDADE E ADAPTAÇÕES
+   ========================================= */
+
+/* NAV MENU RESPONSIVO (TABLET/MOBILE) - LOGO CENTRO, HAMBURGUER ESQUERDA */
+@media (max-width: 992px) {
+    .navbar {
+        height: var(--nav-height-mobile);
+    }
+    
+    .nav-container {
+        position: relative;
+        justify-content: center; /* Base para alinhamento */
+    }
+
+    /* Hambúrguer à esquerda */
+    .mobile-menu-toggle {
+        display: block;
+        position: absolute;
+        left: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        order: 1;
+    }
+
+    /* Logo centralizada */
+    .logo {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        margin: 0;
+        z-index: 1001;
+    }
+
+    .logo img {
+        height: 6rem; /* Ajuste para não quebrar layout */
+        width: auto;
+    }
+
+    /* Menu oculto inicialmente, aparece com classe ativa */
+    .nav-menu {
+        position: fixed;
+        top: var(--nav-height-mobile);
+        left: -100%;
+        width: 100%;
+        height: calc(100vh - var(--nav-height-mobile));
+        background-color: var(--navbar-color);
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding-top: 50px;
+        transition: left 0.3s ease-in-out;
+        box-shadow: inset 0 10px 20px rgba(0,0,0,0.1);
+    }
+
+    /* Estado ativo para abrir menu (acionado por JS existente ou toggle) */
+    .nav-menu.active, 
+    .navbar.active .nav-menu {
+        left: 0;
+        overflow-y: auto;
+    }
+
+    .nav-link {
+        font-size: 1.4rem;
+        display: block;
+        padding: 10px 0;
+    }
+}
+
+/* EVENTOS RESPONSIVOS (MOBILE) */
+@media (max-width: 768px) {
+    /* Transforma o card em coluna (Empilha os itens) */
+    .event-item {
+        flex-direction: column;
+        align-items: stretch; /* Faz os filhos ocuparem a largura total */
+        text-align: center;   /* Centraliza o texto para melhor estética mobile */
+        padding: 20px;
+        gap: 15px;
+    }
+
+    /* Ajusta a caixa da imagem para ocupar 100% da largura do card */
+    .event-image-box {
+        width: 100%;
+        height: 180px; /* Altura fixa para criar um visual de banner */
+        margin-bottom: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* Sombra suave para destacar a imagem */
+    }
+
+    /* Ajuste fino no badge de data para telas pequenas */
+    .event-date-badge {
+        font-size: 1rem;
+        padding: 6px 20px;
+    }
+
+    /* Garante que o texto ocupe o espaço correto */
+    .event-info {
+        width: 100%;
+    }
+
+    .event-info h4 {
+        font-size: 1.3rem; /* Tamanho confortável para leitura */
+    }
+
+    /* Se houver botão dentro do event-info, centraliza ele */
+    .event-info .btn {
+        width: 100%;       /* Botão largura total facilita o toque */
+        max-width: 300px;  /* Mas não deixa ficar gigante */
+        margin-top: 10px;
+    }
+}
+
+/* FOOTER RESPONSIVO */
 @media (max-width: 900px) {
     .footer-cta-section { min-height: 250px; padding: 40px 20px; }
     .btn-whatsapp-cta { font-size: 1.2rem; padding: 12px 30px; width: 100%; max-width: 300px; justify-content: center; }
