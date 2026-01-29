@@ -220,6 +220,52 @@ img { max-width: 100%; height: auto; display: block; }
     letter-spacing: 0.5px;
 }
 
+
+/* =========================================
+   RESPONSIVIDADE - EVENTOS
+   ========================================= */
+@media (max-width: 768px) {
+    
+    /* Transforma o card em coluna (Empilha os itens) */
+    .event-item {
+        flex-direction: column;
+        align-items: stretch; /* Faz os filhos ocuparem a largura total */
+        text-align: center;   /* Centraliza o texto para melhor estética mobile */
+        padding: 20px;
+        gap: 15px;
+    }
+
+    /* Ajusta a caixa da imagem para ocupar 100% da largura do card */
+    .event-image-box {
+        width: 100%;
+        height: 180px; /* Altura fixa para criar um visual de banner */
+        margin-bottom: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* Sombra suave para destacar a imagem */
+    }
+
+    /* Ajuste fino no badge de data para telas pequenas */
+    .event-date-badge {
+        font-size: 1rem;
+        padding: 6px 20px;
+    }
+
+    /* Garante que o texto ocupe o espaço correto */
+    .event-info {
+        width: 100%;
+    }
+
+    .event-info h4 {
+        font-size: 1.3rem; /* Tamanho confortável para leitura */
+    }
+
+    /* Se houver botão dentro do event-info, centraliza ele */
+    .event-info .btn {
+        width: 100%;       /* Botão largura total facilita o toque */
+        max-width: 300px;  /* Mas não deixa ficar gigante */
+        margin-top: 10px;
+    }
+}
+
 .event-item { 
     display: flex;
     align-items: center;
@@ -269,14 +315,17 @@ img { max-width: 100%; height: auto; display: block; }
 .slider-btn.active { background: var(--accent-orange); transform: scale(1.2); }
 
 /* =========================================
-   FOOTER (ESTRUTURA)
+   FOOTER OTIMIZADO
    ========================================= */
+
+/* Seção CTA */
 .footer-cta-section { 
     position: relative; 
     width: 100%; 
     min-height: 350px; 
     height: auto; 
-    background-image: url("img/bg1.jpg"); 
+    /* Link atualizado do Cloudinary */
+    background-image: url("https://res.cloudinary.com/depfruu0c/image/upload/v1769639017/bg1_pg1onk.jpg"); 
     background-size: cover; 
     background-position: center; 
     background-repeat: no-repeat; 
@@ -284,8 +333,13 @@ img { max-width: 100%; height: auto; display: block; }
     align-items: center; 
     justify-content: center; 
     padding: 60px 20px;
+    /* Melhora performance de renderização */
+    transform: translateZ(0);
+    will-change: transform;
 }
-.cta-overlay { width: 100%; height: 100%;  display: flex; align-items: center; justify-content: center; }
+
+.cta-overlay { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+
 .btn-whatsapp-cta {
     background-color: #ea5b0c;
     color: #fff;
@@ -305,6 +359,7 @@ img { max-width: 100%; height: auto; display: block; }
 .btn-whatsapp-cta:hover { background-color: #d14d06; transform: scale(1.05); }
 .btn-whatsapp-cta i { font-size: 1.8rem; }
 
+/* Estrutura Footer */
 .footer-new { 
     background-color: #115E34; 
     color: #fff; 
@@ -312,7 +367,10 @@ img { max-width: 100%; height: auto; display: block; }
     padding-bottom: 0; 
     position: relative; 
     z-index: 50; 
-    width: 100%; 
+    width: 100%;
+    /* Otimização de renderização (corta pintura fora da tela) */
+    content-visibility: auto;
+    contain-intrinsic-size: 400px; 
 }
 
 .footer-grid-layout { 
@@ -324,18 +382,26 @@ img { max-width: 100%; height: auto; display: block; }
 }
 
 .footer-heading { font-family: 'Poppins', sans-serif; font-size: 1.2rem; font-weight: 600; margin-bottom: 20px; color: #fff; }
+
+/* Coluna Contatos */
 .contacts-col { text-align: left; }
 .contact-list { list-style: none; padding: 0; }
 .contact-list li { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 1rem; color: #fff; }
 .contact-list li i { font-size: 1.2rem; width: 20px; text-align: center; }
 
+/* Coluna Social */
 .social-col { text-align: center; }
 .social-icons-box { display: flex; gap: 15px; justify-content: center; }
 .social-icon-btn { width: 45px; height: 45px; background-color: #ea5b0c; color: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; text-decoration: none; transition: 0.3s; }
 .social-icon-btn:hover { background-color: #fff; color: #ea5b0c; transform: translateY(-3px); }
 
-/* Mapa Desktop */
-.map-col { height: 100%; min-height: 250px; }
+/* Coluna Mapa (Otimizada) */
+.map-col { 
+    height: 100%; 
+    min-height: 250px; 
+    position: relative;
+}
+
 .map-frame { 
     width: 100%; 
     height: 100%; 
@@ -343,7 +409,48 @@ img { max-width: 100%; height: auto; display: block; }
     border-radius: 8px; 
     overflow: hidden; 
     box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
-    background: #ccc; 
+    background: #e0e0e0; /* Fundo cinza enquanto carrega */
+    position: relative;
+}
+
+/* Transição suave do iframe */
+.lazy-map {
+    opacity: 0;
+    transition: opacity 0.5s ease-in;
+    position: relative;
+    z-index: 2;
+}
+
+.map-frame.loaded .lazy-map {
+    opacity: 1;
+}
+
+/* Loader do Mapa */
+.map-loader {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    background-color: #e0e0e0;
+}
+
+.map-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(0,0,0,0.1);
+    border-left-color: #ea5b0c;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.map-frame.loaded .map-loader {
+    display: none;
 }
 
 /* Linha Final */
@@ -357,52 +464,11 @@ img { max-width: 100%; height: auto; display: block; }
 }
 .footer-bottom-line p { margin: 0; color: #fff; }
 
-/* =========================================
-   RESPONSIVIDADE (MOBILE E TABLET)
-   ========================================= */
+/* Responsividade */
 @media (max-width: 900px) {
-    .navbar { height: var(--nav-height-mobile); }
-    .mobile-menu-toggle { display: block; position: relative; z-index: 1002; }
-    .logo { position: absolute; left: 50%; transform: translateX(-50%); z-index: 1001; }
-    .logo img { width: 80px; }
+    .footer-cta-section { min-height: 250px; padding: 40px 20px; }
+    .btn-whatsapp-cta { font-size: 1.2rem; padding: 12px 30px; width: 100%; max-width: 300px; justify-content: center; }
 
-    .nav-menu {
-        position: fixed; top: var(--nav-height-mobile); left: 0; width: 75%; height: calc(100vh - var(--nav-height-mobile));
-        background: var(--navbar-color); 
-        flex-direction: column; justify-content: flex-start; padding-top: 2rem; gap: 0;
-        transform: translateX(-100%); transition: transform 0.3s ease-in-out;
-        box-shadow: 2px 0 10px rgba(0,0,0,0.2);
-    }
-    .nav-menu.active { transform: translateX(0); }
-    .nav-menu li { width: 100%; border-bottom: 1px solid rgba(255,255,255,0.1); }
-    .nav-link { display: block; padding: 1.5rem 2rem; font-size: 1.2rem; }
-    .nav-link:hover { background: rgba(255,255,255,0.1); }
-    .nav-link::after { display: none; }
-
-    body { 
-        padding-top: calc(var(--nav-height-mobile) + var(--wave-height-mobile)); 
-        min-height: 100vh;
-        height: auto;
-    }
-
-    /* Eventos no Mobile */
-    .event-item { 
-        flex-direction: column; 
-        text-align: center; 
-        padding: 25px;
-        gap: 20px;
-    }
-    .event-image-box {
-        width: 100%; 
-        height: 200px; 
-        margin-bottom: 10px;
-    }
-    .event-date-badge {
-        font-size: 1.2rem; 
-        padding: 10px 30px;
-    }
-
-    /* FOOTER MOBILE - AJUSTES DE SCROLL */
     .footer-grid-layout { 
         display: flex;
         flex-direction: column;
@@ -410,43 +476,11 @@ img { max-width: 100%; height: auto; display: block; }
         gap: 50px; 
     }
 
-    .contacts-col, .social-col, .map-col {
-        width: 100%; 
-        height: auto; 
-    }
-
-    .contacts-col { 
-        align-items: center; 
-        display: flex; 
-        flex-direction: column; 
-    }
-    .contact-list li { justify-content: center; }
+    .contacts-col, .social-col, .map-col { width: 100%; height: auto; }
+    .contacts-col { align-items: center; display: flex; flex-direction: column; }
     
-    /* CORREÇÃO ALTURA MAPA MOBILE */
     .map-col { width: 100%; display: block; }
-    .map-frame {
-        height: 350px !important; 
-        min-height: 350px;
-        width: 100%;
-    }
-
-    .btn-whatsapp-cta { font-size: 1.2rem; padding: 12px 30px; width: 100%; max-width: 300px; justify-content: center; }
-    .footer-cta-section { min-height: 250px; }
+    .map-frame { height: 350px !important; min-height: 350px; width: 100%; }
     
-    .svg-wave-container {
-        height: var(--wave-height-mobile);
-    }
-
-    /* PADDING GIGANTE NO FIM PARA GARANTIR VISIBILIDADE NO MOBILE */
-    .footer-bottom-line {
-        padding-bottom: 120px; 
-    }
-}
-
-@media (max-width: 600px) {
-    .section { padding: 40px 0; }
-    .gallery-grid { grid-template-columns: 1fr; gap: 20px; }
-    .gallery-item { height: 350px; }
-    .close-lightbox { top: 10px; right: 10px; font-size: 30px; }
-    .lightbox-nav { width: 40px; height: 40px; font-size: 1.2rem; }
+    .footer-bottom-line { padding-bottom: 120px; }
 }
