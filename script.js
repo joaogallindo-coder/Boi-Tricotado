@@ -110,11 +110,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ==========================================
-    // 4. GALERIA HÍBRIDA (CORRIGIDA - IGNORA ERRO 404)
+    // 4. GALERIA (VERSÃO BLINDADA)
     // ==========================================
     const initGallery = async () => {
         
-        // --- CONFIGURAÇÃO (Futura) ---
+        // --- SEUS DADOS ---
         const REPO_CONFIG = {
             owner: 'SEU_USUARIO_GITHUB', 
             repo: 'NOME_DO_REPOSITORIO',
@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
             branch: 'main'
         };
 
-        // --- IMAGENS ATUAIS (Cloudinary) ---
+        // --- IMAGENS CLOUDINARY (GARANTIDAS) ---
         const staticImages = [
             { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639014/4_vo4miq.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639014/4_vo4miq.jpg', alt: 'Galeria 9' },
             { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639015/5_qnak9q.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639015/5_qnak9q.jpg', alt: 'Galeria 5' },
@@ -156,22 +156,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const LOAD_STEP = 3;
         const preloadedImages = new Set();
 
-        // --- FETCH SEGURO (NÃO MOSTRA ERRO SE FALHAR) ---
+        // --- FETCH SEGURO DO GITHUB ---
         const fetchGitHubImages = async () => {
+            // TRAVA DE SEGURANÇA: Se o usuário não configurou, NEM TENTA buscar.
+            // Isso evita o erro 404 completamente.
+            if (REPO_CONFIG.owner === 'SEU_USUARIO_GITHUB' || REPO_CONFIG.repo === 'NOME_DO_REPOSITORIO') {
+                return;
+            }
+
             try {
                 const url = `https://api.github.com/repos/${REPO_CONFIG.owner}/${REPO_CONFIG.repo}/contents/${REPO_CONFIG.path}?ref=${REPO_CONFIG.branch}`;
                 const response = await fetch(url);
                 
-                // SE DER 404 (Pasta não existe), APENAS PARA (Não joga erro na tela)
-                if (response.status === 404) {
-                    console.log('Pasta do GitHub ainda não criada. Usando apenas Cloudinary.');
-                    return; 
-                }
+                // Se der 404, simplesmente para.
+                if (response.status === 404) return;
                 
-                if (!response.ok) return; // Outros erros de rede, ignora silenciosamente
+                if (!response.ok) return;
 
                 const data = await response.json();
                 
+                // Verifica se 'data' é realmente um array (proteção extra)
+                if (!Array.isArray(data)) return;
+
                 const githubImages = data
                     .filter(file => file.type === 'file' && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.name))
                     .map(file => ({
@@ -183,21 +189,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (githubImages.length > 0) {
                     galleryData = [...staticImages, ...githubImages];
                     
-                    // Se já exibiu todas as estáticas, mostra o botão para carregar as novas
+                    // Atualiza botão se necessário
                     if (renderedCount >= staticImages.length && elements.loadBtn) {
                         elements.loadBtn.style.display = 'inline-block';
                         elements.loadBtn.textContent = 'Carregar Mais';
                     }
                 }
             } catch (error) {
-                // Se der erro técnico (ex: internet), não faz nada.
-                console.log('Modo Offline/Erro GitHub:', error);
+                // Silêncio absoluto em caso de erro.
+                // Apenas console.warn para debug, mas nada na tela do usuário.
+                console.warn('GitHub ignorado (modo offline ou config inválida).');
             }
         };
 
         const renderImages = (count) => {
             const total = galleryData.length;
-            // Oculta botão se acabou
             if (renderedCount >= total && renderedCount > 0) {
                  if (elements.loadBtn) elements.loadBtn.style.display = 'none';
                  return;
@@ -305,10 +311,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'ArrowRight') navigate(1);
         });
 
-        // 1. CARREGA IMEDIATAMENTE O CLOUDINARY
+        // 1. CARREGA ESTÁTICAS IMEDIATAMENTE
         renderImages(INITIAL_LOAD);
         
-        // 2. Tenta GitHub em segundo plano (Se não achar, fica quieto)
+        // 2. BUSCA GITHUB (SE CONFIGURADO)
         fetchGitHubImages();
     };
 
