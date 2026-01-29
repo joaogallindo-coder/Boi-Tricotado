@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     const initNavbarScroll = () => {
         const navbar = document.getElementById('navbar');
+        if (!navbar) return;
+        
         let ticking = false;
 
         window.addEventListener('scroll', () => {
@@ -23,31 +25,37 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ==========================================
-    // 2. MENU MOBILE (MANTIDO - LEVE E FUNCIONAL)
+    // 2. MENU MOBILE (OTIMIZADO)
     // ==========================================
     const initMobileMenu = () => {
         const mobileMenuToggle = document.getElementById('mobileMenuToggle');
         const navMenu = document.getElementById('navMenu');
-        const menuIcon = mobileMenuToggle.querySelector('i');
-
+        
         if (!mobileMenuToggle || !navMenu) return;
 
+        const menuIcon = mobileMenuToggle.querySelector('i');
+
         const toggleMenu = () => {
-            const isActive = navMenu.classList.toggle('active');
-            if (isActive) {
-                menuIcon.classList.remove('fa-bars');
-                menuIcon.classList.add('fa-times');
-            } else {
-                menuIcon.classList.remove('fa-times');
-                menuIcon.classList.add('fa-bars');
-            }
-            mobileMenuToggle.setAttribute('aria-expanded', isActive);
+            // Usa requestAnimationFrame para garantir suavidade na animação CSS
+            window.requestAnimationFrame(() => {
+                const isActive = navMenu.classList.toggle('active');
+                if (menuIcon) {
+                    if (isActive) {
+                        menuIcon.classList.remove('fa-bars');
+                        menuIcon.classList.add('fa-times');
+                    } else {
+                        menuIcon.classList.remove('fa-times');
+                        menuIcon.classList.add('fa-bars');
+                    }
+                }
+                mobileMenuToggle.setAttribute('aria-expanded', isActive);
+            });
         };
 
         mobileMenuToggle.addEventListener('click', (e) => {
             e.stopPropagation();
             toggleMenu();
-        });
+        }, { passive: true }); // Passive melhora performance de toque
 
         document.addEventListener('click', (e) => {
             if (navMenu.classList.contains('active') &&
@@ -57,76 +65,106 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                const targetId = this.getAttribute('href');
+        // Delegação de eventos para links internos
+        navMenu.addEventListener('click', (e) => {
+            if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
+                const targetId = e.target.getAttribute('href');
                 if (targetId === '#') return;
+                
                 const target = document.querySelector(targetId);
-                if (target) {
-                    if (navMenu.classList.contains('active')) toggleMenu();
+                if (target && navMenu.classList.contains('active')) {
+                    toggleMenu();
                 }
-            });
+            }
         });
     };
 
     // ==========================================
-    // 3. TESTIMONIAL SLIDER (MANTIDO)
+    // 3. TESTIMONIAL SLIDER (PERFORMANCE: OBSERVER)
     // ==========================================
     const initTestimonials = () => {
         const track = document.getElementById('testimonialTrack');
         const buttons = document.querySelectorAll('.slider-btn');
+        const container = document.querySelector('.testimonials-container');
         
-        if (!track) return;
+        if (!track || !container) return;
 
         let currentIndex = 0;
         let interval;
+        let isVisible = false;
 
         const updateSlider = (index) => {
             currentIndex = index;
-            track.style.transform = `translateX(-${index * 100}%)`;
-            
-            buttons.forEach((btn, i) => {
-                btn.classList.toggle('active', i === index);
+            window.requestAnimationFrame(() => {
+                track.style.transform = `translateX(-${index * 100}%)`;
+                buttons.forEach((btn, i) => {
+                    if (i === index) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                });
             });
         };
 
+        const stopAutoPlay = () => clearInterval(interval);
+
         const startAutoPlay = () => {
-            clearInterval(interval);
+            stopAutoPlay();
+            // Só inicia se estiver visível para não gastar CPU à toa
+            if (!isVisible) return; 
+            
             interval = setInterval(() => {
-                currentIndex = (currentIndex + 1) % buttons.length;
-                updateSlider(currentIndex);
+                const nextIndex = (currentIndex + 1) % buttons.length;
+                updateSlider(nextIndex);
             }, 6000);
         };
+
+        // Observer: Pausa o slider quando sai da tela (Otimização crítica)
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    isVisible = entry.isIntersecting;
+                    if (isVisible) startAutoPlay();
+                    else stopAutoPlay();
+                });
+            }, { threshold: 0.1 });
+            observer.observe(container);
+        } else {
+            isVisible = true;
+            startAutoPlay();
+        }
+
+        // Pausa se o usuário mudar de aba
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) stopAutoPlay();
+            else if (isVisible) startAutoPlay();
+        });
 
         buttons.forEach((btn, index) => {
             btn.addEventListener('click', () => {
                 updateSlider(index);
-                startAutoPlay();
+                startAutoPlay(); // Reinicia o timer ao interagir
             });
         });
 
-        track.addEventListener('mouseenter', () => clearInterval(interval));
-        track.addEventListener('mouseleave', startAutoPlay);
-
-        startAutoPlay();
+        track.addEventListener('mouseenter', stopAutoPlay, { passive: true });
+        track.addEventListener('mouseleave', () => {
+            if (isVisible) startAutoPlay();
+        }, { passive: true });
     };
 
     // ==========================================
-    // 4. GALERIA & LIGHTBOX (PERFORMANCE MODE)
+    // 4. GALERIA & LIGHTBOX (ZERO LAGGING)
     // ==========================================
     const initGallery = () => {
-        // OTIMIZAÇÃO: Estrutura preparada para Thumbnails vs Full
-        // Se não tiver thumbnail real, usa a mesma imagem, mas a lógica está pronta.
         const galleryData = [
-            { thumb: 'img/4.jpg', full: 'img/4.jpg', alt: 'Galeria 9' },
-            { thumb: 'img/5.jpg', full: 'img/5.jpg', alt: 'Galeria 5' },
-            { thumb: 'img/8.jpg', full: 'img/8.jpg', alt: 'Galeria 8' },
-            { thumb: 'img/6.jpg', full: 'img/6.jpg', alt: 'Galeria 4' },
-            { thumb: 'img/9.jpg', full: 'img/9.jpg', alt: 'Galeria 5' },
-            { thumb: 'img/3.jpg', full: 'img/3.jpg', alt: 'Galeria 6' },
-            { thumb: 'img/7.jpg', full: 'img/7.jpg', alt: 'Extra 1' },
-            { thumb: 'img/1.jpg', full: 'img/1.jpg', alt: 'Extra 2' },
-            { thumb: 'img/2.jpg', full: 'img/2.jpg', alt: 'Extra 3' },
+            { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639014/4_vo4miq.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639014/4_vo4miq.jpg', alt: 'Galeria 9' },
+            { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639015/5_qnak9q.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639015/5_qnak9q.jpg', alt: 'Galeria 5' },
+            { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639017/8_r6jqf9.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639017/8_r6jqf9.jpg', alt: 'Galeria 8' },
+            { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639016/6_xiamzn.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639016/6_xiamzn.jpg', alt: 'Galeria 4' },
+            { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639022/9_ajpiez.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639022/9_ajpiez.jpg', alt: 'Galeria 5' },
+            { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639014/3_cjou3m.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639014/3_cjou3m.jpg', alt: 'Galeria 6' },
+            { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639016/7_fi8npu.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639016/7_fi8npu.jpg', alt: 'Extra 1' },
+            { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639013/1_qnkqsb.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639013/1_qnkqsb.jpg', alt: 'Extra 2' },
+            { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639013/2_r30lbb.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639013/2_r30lbb.jpg', alt: 'Extra 3' },
         ];
 
         const elements = {
@@ -147,13 +185,11 @@ document.addEventListener('DOMContentLoaded', () => {
         let lightboxIndex = 0;
         const INITIAL_LOAD = 6;
         const LOAD_STEP = 3;
-        
-        // Cache de imagens pré-carregadas para evitar requisições duplas
         const preloadedImages = new Set();
 
-        // Função auxiliar de Preload (Não bloqueante)
         const preloadImage = (url) => {
             if (!url || preloadedImages.has(url)) return;
+            // Criação de imagem assíncrona que não bloqueia a thread principal
             const img = new Image();
             img.src = url;
             preloadedImages.add(url);
@@ -162,16 +198,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const renderImages = (count) => {
             const total = galleryData.length;
             const limit = Math.min(renderedCount + count, total);
+            
+            // DocumentFragment para evitar Reflow/Repaint múltiplo (Muito mais rápido)
             const fragment = document.createDocumentFragment();
 
             for (let i = renderedCount; i < limit; i++) {
                 const item = galleryData[i];
                 const card = document.createElement('div');
                 card.className = 'gallery-item';
-                // Dataset armazena o índice para Event Delegation
                 card.dataset.index = i; 
                 
-                // OTIMIZAÇÃO: decoding="async" ajuda a não travar a renderização da página
                 card.innerHTML = `
                     <img src="${item.thumb}" 
                          alt="${item.alt}" 
@@ -182,54 +218,57 @@ document.addEventListener('DOMContentLoaded', () => {
                         <i class="fas fa-search-plus"></i>
                     </div>
                 `;
-
                 fragment.appendChild(card);
             }
 
-            elements.grid.appendChild(fragment);
-            renderedCount = limit;
-
-            if (renderedCount >= total && elements.loadBtn) {
-                elements.loadBtn.style.display = 'none';
-            }
+            // Apenas uma escrita no DOM real
+            window.requestAnimationFrame(() => {
+                elements.grid.appendChild(fragment);
+                renderedCount = limit;
+                if (renderedCount >= total && elements.loadBtn) {
+                    elements.loadBtn.style.display = 'none';
+                }
+            });
         };
 
-        // OTIMIZAÇÃO: Event Delegation (1 listener para todo o grid)
+        // Event Delegation
         elements.grid.addEventListener('click', (e) => {
             const card = e.target.closest('.gallery-item');
             if (card) {
-                const index = parseInt(card.dataset.index, 10);
-                openLightbox(index);
+                openLightbox(parseInt(card.dataset.index, 10));
             }
         });
 
         const updateLightbox = () => {
             const item = galleryData[lightboxIndex];
             
-            // Troca de imagem
-            elements.modalImg.src = item.full;
-            elements.modalImg.alt = item.alt;
-            
-            if(elements.counter) elements.counter.textContent = `${lightboxIndex + 1} / ${galleryData.length}`;
-            updateDotsState();
+            // RAF garante que a UI atualize sem travar visualmente
+            window.requestAnimationFrame(() => {
+                elements.modalImg.src = item.full;
+                elements.modalImg.alt = item.alt;
+                
+                if(elements.counter) elements.counter.textContent = `${lightboxIndex + 1} / ${galleryData.length}`;
+                
+                if(elements.dots) {
+                    Array.from(elements.dots.children).forEach((dot, i) => {
+                        if (i === lightboxIndex) dot.classList.add('active');
+                        else dot.classList.remove('active');
+                    });
+                }
+            });
 
-            // OTIMIZAÇÃO CRÍTICA: Preload dos vizinhos
-            // Carrega a próxima e a anterior enquanto o usuário vê a atual
-            const total = galleryData.length;
-            const nextIndex = (lightboxIndex + 1) % total;
-            const prevIndex = (lightboxIndex - 1 + total) % total;
-
-            // setTimeout para garantir que o navegador priorize a imagem atual primeiro
+            // Preload vizinhos em background (sem bloquear UI)
             setTimeout(() => {
-                preloadImage(galleryData[nextIndex].full);
-                preloadImage(galleryData[prevIndex].full);
-            }, 200);
+                const total = galleryData.length;
+                preloadImage(galleryData[(lightboxIndex + 1) % total].full);
+                preloadImage(galleryData[(lightboxIndex - 1 + total) % total].full);
+            }, 100);
         };
 
         const openLightbox = (index) => {
             lightboxIndex = index;
+            renderDots(); // Renderiza dots apenas uma vez ao abrir
             updateLightbox();
-            renderDots();
             elements.modal.classList.add('active');
             document.body.style.overflow = 'hidden';
         };
@@ -237,29 +276,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const closeLightbox = () => {
             elements.modal.classList.remove('active');
             document.body.style.overflow = '';
-            // Limpar src libera memória da imagem pesada se o usuário ficar muito tempo fora do lightbox
             setTimeout(() => {
                 if(!elements.modal.classList.contains('active')) {
-                    elements.modalImg.src = ''; 
+                    elements.modalImg.src = ''; // Limpa memória
                 }
-            }, 300); 
-        };
-
-        const navigate = (direction) => {
-            const total = galleryData.length;
-            lightboxIndex = (lightboxIndex + direction + total) % total;
-            updateLightbox();
+            }, 300);
         };
 
         const renderDots = () => {
             if(!elements.dots) return;
-            elements.dots.innerHTML = '';
+            // Verifica se já existem dots para não recriar desnecessariamente
+            if(elements.dots.childElementCount === galleryData.length) return;
+
             const fragment = document.createDocumentFragment();
-            
             galleryData.forEach((_, i) => {
                 const dot = document.createElement('div');
-                dot.className = `l-dot ${i === lightboxIndex ? 'active' : ''}`;
-                // Event Delegation poderia ser usado aqui também, mas dots são poucos
+                dot.className = 'l-dot';
                 dot.onclick = (e) => {
                     e.stopPropagation();
                     lightboxIndex = i;
@@ -267,17 +299,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 fragment.appendChild(dot);
             });
+            elements.dots.innerHTML = '';
             elements.dots.appendChild(fragment);
         };
 
-        const updateDotsState = () => {
-            if(!elements.dots) return;
-            Array.from(elements.dots.children).forEach((dot, i) => {
-                dot.classList.toggle('active', i === lightboxIndex);
-            });
-        };
-
-        // Listeners
+        // Listeners otimizados
         if(elements.loadBtn) elements.loadBtn.onclick = () => renderImages(LOAD_STEP);
         elements.closeBtn.onclick = closeLightbox;
         elements.prevBtn.onclick = (e) => { e.stopPropagation(); navigate(-1); };
@@ -287,6 +313,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.target === elements.modal) closeLightbox();
         };
 
+        const navigate = (dir) => {
+            lightboxIndex = (lightboxIndex + dir + galleryData.length) % galleryData.length;
+            updateLightbox();
+        };
+
         document.addEventListener('keydown', (e) => {
             if (!elements.modal.classList.contains('active')) return;
             if (e.key === 'Escape') closeLightbox();
@@ -294,13 +325,24 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'ArrowRight') navigate(1);
         });
 
-        // Inicializa
-        renderImages(INITIAL_LOAD);
+        // Carregamento inicial diferido para não bloquear o paint principal
+        setTimeout(() => renderImages(INITIAL_LOAD), 0);
     };
 
-    // Execução
+    // EXECUÇÃO ORQUESTRADA (Evita travamento no load da página)
     initNavbarScroll();
     initMobileMenu();
-    initTestimonials();
-    initGallery();
+    
+    // Deferir scripts não críticos
+    if (window.requestIdleCallback) {
+        window.requestIdleCallback(() => {
+            initGallery();
+            initTestimonials();
+        });
+    } else {
+        setTimeout(() => {
+            initGallery();
+            initTestimonials();
+        }, 50);
+    }
 });
