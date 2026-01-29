@@ -15,7 +15,7 @@
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     
     /* Configurações da Navbar + Onda */
-    --navbar-color: #E47400; 
+    --navbar-color: #ff7300; 
     --nav-height-desktop: 7.2rem;
     --nav-height-mobile: 6rem;
     --wave-height-desktop: 45px;
@@ -547,4 +547,5 @@ img { max-width: 100%; height: auto; display: block; }
     
     .footer-bottom-line { padding-bottom: 120px; }
 }
+
 
