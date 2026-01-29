@@ -1,5 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+    // Referências globais para comunicação entre módulos
+    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+    const menuIcon = mobileMenuToggle ? mobileMenuToggle.querySelector('i') : null;
+    const lightboxModal = document.getElementById('lightboxModal');
+    const closeLightboxBtn = document.getElementById('closeLightbox');
+
     // ==========================================
     // 1. NAVBAR SCROLL
     // ==========================================
@@ -11,7 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('scroll', () => {
             if (!ticking) {
                 window.requestAnimationFrame(() => {
-                    navbar.classList.toggle('scrolled', window.scrollY > 50);
+                    if (window.scrollY > 50) navbar.classList.add('scrolled');
+                    else navbar.classList.remove('scrolled');
                     ticking = false;
                 });
                 ticking = true;
@@ -20,46 +27,63 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ==========================================
-    // 2. MENU MOBILE
+    // 2. MENU MOBILE (COM INTERCEPTAÇÃO DA GALERIA)
     // ==========================================
     const initMobileMenu = () => {
-        const mobileMenuToggle = document.getElementById('mobileMenuToggle');
         const navMenu = document.getElementById('navMenu');
         if (!mobileMenuToggle || !navMenu) return;
-
-        const menuIcon = mobileMenuToggle.querySelector('i');
 
         const toggleMenu = () => {
             window.requestAnimationFrame(() => {
                 const isActive = navMenu.classList.toggle('active');
                 if (menuIcon) {
-                    menuIcon.classList.toggle('fa-bars', !isActive);
-                    menuIcon.classList.toggle('fa-times', isActive);
+                    if (isActive) {
+                        menuIcon.classList.remove('fa-bars');
+                        menuIcon.classList.add('fa-times');
+                    } else {
+                        menuIcon.classList.remove('fa-times');
+                        menuIcon.classList.add('fa-bars');
+                    }
                 }
                 mobileMenuToggle.setAttribute('aria-expanded', isActive);
             });
         };
 
+        // LÓGICA DO CLIQUE NO HAMBÚRGUER
         mobileMenuToggle.addEventListener('click', (e) => {
             e.stopPropagation();
+
+            // VERIFICAÇÃO: Se a galeria estiver aberta
+            if (lightboxModal && lightboxModal.classList.contains('active')) {
+                // Simula um clique no botão de fechar da galeria
+                if (closeLightboxBtn) closeLightboxBtn.click();
+                return; // PARE AQUI (Não abre o menu lateral)
+            }
+
+            // Comportamento normal (abrir menu)
             toggleMenu();
         }, { passive: true });
 
         document.addEventListener('click', (e) => {
-            if (navMenu.classList.contains('active') && !navMenu.contains(e.target) && !mobileMenuToggle.contains(e.target)) {
+            if (navMenu.classList.contains('active') &&
+                !navMenu.contains(e.target) &&
+                !mobileMenuToggle.contains(e.target)) {
                 toggleMenu();
             }
         });
 
         navMenu.addEventListener('click', (e) => {
             if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
-                if (navMenu.classList.contains('active')) toggleMenu();
+                const target = document.querySelector(e.target.getAttribute('href'));
+                if (target && navMenu.classList.contains('active')) {
+                    toggleMenu();
+                }
             }
         });
     };
 
     // ==========================================
-    // 3. TESTIMONIAL SLIDER
+    // 3. TESTIMONIAL SLIDER (AUTOMÁTICO 5s)
     // ==========================================
     const initTestimonials = () => {
         const track = document.getElementById('testimonialTrack');
@@ -70,33 +94,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let currentIndex = 0;
         let interval;
-        let isVisible = true;
+        let isVisible = false;
 
         const updateSlider = (index) => {
             currentIndex = index;
             window.requestAnimationFrame(() => {
                 track.style.transform = `translateX(-${index * 100}%)`;
-                buttons.forEach((btn, i) => btn.classList.toggle('active', i === index));
+                buttons.forEach((btn, i) => {
+                    if (i === index) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                });
             });
         };
 
+        const stopAutoPlay = () => clearInterval(interval);
+        
         const startAutoPlay = () => {
-            clearInterval(interval);
-            if (!isVisible) return;
+            stopAutoPlay();
+            // Só inicia se estiver visível para não gastar CPU à toa
+            if (!isVisible) return; 
+            
+            // CONFIGURADO PARA 5 SEGUNDOS (5000ms)
             interval = setInterval(() => {
-                updateSlider((currentIndex + 1) % buttons.length);
-            }, 6000);
+                const nextIndex = (currentIndex + 1) % buttons.length;
+                updateSlider(nextIndex);
+            }, 5000);
         };
 
         if ('IntersectionObserver' in window) {
             const observer = new IntersectionObserver((entries) => {
-                isVisible = entries[0].isIntersecting;
-                isVisible ? startAutoPlay() : clearInterval(interval);
+                entries.forEach(entry => {
+                    isVisible = entry.isIntersecting;
+                    if (isVisible) startAutoPlay();
+                    else stopAutoPlay();
+                });
             }, { threshold: 0.1 });
             observer.observe(container);
         } else {
+            isVisible = true;
             startAutoPlay();
         }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) stopAutoPlay();
+            else if (isVisible) startAutoPlay();
+        });
 
         buttons.forEach((btn, index) => {
             btn.addEventListener('click', () => {
@@ -105,25 +147,17 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        track.addEventListener('mouseenter', () => clearInterval(interval), { passive: true });
-        track.addEventListener('mouseleave', () => { if(isVisible) startAutoPlay() }, { passive: true });
+        track.addEventListener('mouseenter', stopAutoPlay, { passive: true });
+        track.addEventListener('mouseleave', () => {
+            if (isVisible) startAutoPlay();
+        }, { passive: true });
     };
 
     // ==========================================
-    // 4. GALERIA (VERSÃO BLINDADA)
+    // 4. GALERIA & LIGHTBOX (CONTROLA O HAMBÚRGUER + CLIQUE FORA)
     // ==========================================
-    const initGallery = async () => {
-        
-        // --- SEUS DADOS ---
-        const REPO_CONFIG = {
-            owner: 'SEU_USUARIO_GITHUB', 
-            repo: 'NOME_DO_REPOSITORIO',
-            path: 'assets/img/gallery',   
-            branch: 'main'
-        };
-
-        // --- IMAGENS CLOUDINARY (GARANTIDAS) ---
-        const staticImages = [
+    const initGallery = () => {
+        const galleryData = [
             { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639014/4_vo4miq.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639014/4_vo4miq.jpg', alt: 'Galeria 9' },
             { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639015/5_qnak9q.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639015/5_qnak9q.jpg', alt: 'Galeria 5' },
             { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639017/8_r6jqf9.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639017/8_r6jqf9.jpg', alt: 'Galeria 8' },
@@ -149,66 +183,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!elements.grid) return;
 
-        let galleryData = [...staticImages];
         let renderedCount = 0;
         let lightboxIndex = 0;
         const INITIAL_LOAD = 6;
         const LOAD_STEP = 3;
         const preloadedImages = new Set();
 
-        // --- FETCH SEGURO DO GITHUB ---
-        const fetchGitHubImages = async () => {
-            // TRAVA DE SEGURANÇA: Se o usuário não configurou, NEM TENTA buscar.
-            // Isso evita o erro 404 completamente.
-            if (REPO_CONFIG.owner === 'SEU_USUARIO_GITHUB' || REPO_CONFIG.repo === 'NOME_DO_REPOSITORIO') {
-                return;
-            }
-
-            try {
-                const url = `https://api.github.com/repos/${REPO_CONFIG.owner}/${REPO_CONFIG.repo}/contents/${REPO_CONFIG.path}?ref=${REPO_CONFIG.branch}`;
-                const response = await fetch(url);
-                
-                // Se der 404, simplesmente para.
-                if (response.status === 404) return;
-                
-                if (!response.ok) return;
-
-                const data = await response.json();
-                
-                // Verifica se 'data' é realmente um array (proteção extra)
-                if (!Array.isArray(data)) return;
-
-                const githubImages = data
-                    .filter(file => file.type === 'file' && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.name))
-                    .map(file => ({
-                        thumb: file.download_url,
-                        full: file.download_url,
-                        alt: file.name.replace(/\.[^/.]+$/, "").replace(/-/g, " ")
-                    }));
-
-                if (githubImages.length > 0) {
-                    galleryData = [...staticImages, ...githubImages];
-                    
-                    // Atualiza botão se necessário
-                    if (renderedCount >= staticImages.length && elements.loadBtn) {
-                        elements.loadBtn.style.display = 'inline-block';
-                        elements.loadBtn.textContent = 'Carregar Mais';
-                    }
-                }
-            } catch (error) {
-                // Silêncio absoluto em caso de erro.
-                // Apenas console.warn para debug, mas nada na tela do usuário.
-                console.warn('GitHub ignorado (modo offline ou config inválida).');
-            }
+        const preloadImage = (url) => {
+            if (!url || preloadedImages.has(url)) return;
+            const img = new Image();
+            img.src = url;
+            preloadedImages.add(url);
         };
 
         const renderImages = (count) => {
             const total = galleryData.length;
-            if (renderedCount >= total && renderedCount > 0) {
-                 if (elements.loadBtn) elements.loadBtn.style.display = 'none';
-                 return;
-            }
-
             const limit = Math.min(renderedCount + count, total);
             const fragment = document.createDocumentFragment();
 
@@ -217,30 +206,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const card = document.createElement('div');
                 card.className = 'gallery-item';
                 card.dataset.index = i; 
-                
                 card.innerHTML = `
-                    <img src="${item.thumb}" 
-                         alt="${item.alt}" 
-                         loading="lazy" 
-                         decoding="async"
-                         width="400" height="300">
-                    <div class="gallery-overlay">
-                        <i class="fas fa-search-plus"></i>
-                    </div>
-                `;
+                    <img src="${item.thumb}" alt="${item.alt}" loading="lazy" decoding="async" width="400" height="300">
+                    <div class="gallery-overlay"><i class="fas fa-search-plus"></i></div>`;
                 fragment.appendChild(card);
             }
 
             window.requestAnimationFrame(() => {
                 elements.grid.appendChild(fragment);
                 renderedCount = limit;
-                if (elements.loadBtn) {
-                    elements.loadBtn.style.display = (renderedCount >= total) ? 'none' : 'inline-block';
-                }
+                if (renderedCount >= total && elements.loadBtn) elements.loadBtn.style.display = 'none';
             });
         };
 
-        // --- Lightbox Logic ---
         elements.grid.addEventListener('click', (e) => {
             const card = e.target.closest('.gallery-item');
             if (card) openLightbox(parseInt(card.dataset.index, 10));
@@ -248,20 +226,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const updateLightbox = () => {
             const item = galleryData[lightboxIndex];
-            if (!item) return;
-
             window.requestAnimationFrame(() => {
                 elements.modalImg.src = item.full;
                 elements.modalImg.alt = item.alt;
                 if(elements.counter) elements.counter.textContent = `${lightboxIndex + 1} / ${galleryData.length}`;
-                
                 if(elements.dots) {
-                    if (elements.dots.childElementCount !== galleryData.length) renderDots();
                     Array.from(elements.dots.children).forEach((dot, i) => {
-                        dot.classList.toggle('active', i === lightboxIndex);
+                        if (i === lightboxIndex) dot.classList.add('active');
+                        else dot.classList.remove('active');
                     });
                 }
             });
+            setTimeout(() => {
+                const total = galleryData.length;
+                preloadImage(galleryData[(lightboxIndex + 1) % total].full);
+                preloadImage(galleryData[(lightboxIndex - 1 + total) % total].full);
+            }, 100);
         };
 
         const openLightbox = (index) => {
@@ -270,26 +250,47 @@ document.addEventListener('DOMContentLoaded', () => {
             updateLightbox();
             elements.modal.classList.add('active');
             document.body.style.overflow = 'hidden';
+
+            // --- LÓGICA DO MENU HAMBÚRGUER VIROU X E VEIO PRA FRENTE ---
+            if (mobileMenuToggle && menuIcon) {
+                // Traz o botão para cima da lightbox (z-index maior que 99999)
+                mobileMenuToggle.style.zIndex = '100001'; 
+                // Transforma em X
+                menuIcon.classList.remove('fa-bars');
+                menuIcon.classList.add('fa-times');
+            }
         };
 
         const closeLightbox = () => {
             elements.modal.classList.remove('active');
             document.body.style.overflow = '';
+
+            // --- REVERTE O MENU HAMBÚRGUER PARA BARRAS ---
+            if (mobileMenuToggle && menuIcon) {
+                // Remove o z-index forçado (volta ao padrão do CSS)
+                mobileMenuToggle.style.zIndex = '';
+                // Transforma em Barras
+                menuIcon.classList.remove('fa-times');
+                menuIcon.classList.add('fa-bars');
+            }
+
             setTimeout(() => {
-                if(!elements.modal.classList.contains('active')) elements.modalImg.src = '';
+                if(!elements.modal.classList.contains('active')) {
+                    elements.modalImg.src = '';
+                }
             }, 300);
         };
 
         const renderDots = () => {
-            if(!elements.dots) return;
-            elements.dots.innerHTML = '';
+            if(!elements.dots || elements.dots.childElementCount === galleryData.length) return;
             const fragment = document.createDocumentFragment();
             galleryData.forEach((_, i) => {
                 const dot = document.createElement('div');
-                dot.className = i === lightboxIndex ? 'l-dot active' : 'l-dot';
+                dot.className = 'l-dot';
                 dot.onclick = (e) => { e.stopPropagation(); lightboxIndex = i; updateLightbox(); };
                 fragment.appendChild(dot);
             });
+            elements.dots.innerHTML = '';
             elements.dots.appendChild(fragment);
         };
 
@@ -297,7 +298,12 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.closeBtn.onclick = closeLightbox;
         elements.prevBtn.onclick = (e) => { e.stopPropagation(); navigate(-1); };
         elements.nextBtn.onclick = (e) => { e.stopPropagation(); navigate(1); };
-        elements.modal.onclick = (e) => { if (e.target === elements.modal) closeLightbox(); };
+        
+        // --- FECHAR AO CLICAR FORA DA IMAGEM ---
+        elements.modal.onclick = (e) => {
+            // Se o alvo do clique for exatamente o fundo (modal), fecha.
+            if (e.target === elements.modal) closeLightbox();
+        };
 
         const navigate = (dir) => {
             lightboxIndex = (lightboxIndex + dir + galleryData.length) % galleryData.length;
@@ -311,28 +317,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'ArrowRight') navigate(1);
         });
 
-        // 1. CARREGA ESTÁTICAS IMEDIATAMENTE
-        renderImages(INITIAL_LOAD);
-        
-        // 2. BUSCA GITHUB (SE CONFIGURADO)
-        fetchGitHubImages();
+        setTimeout(() => renderImages(INITIAL_LOAD), 0);
     };
 
-    // ==========================================
-    // EXECUÇÃO GERAL
-    // ==========================================
+    // EXECUÇÃO
     initNavbarScroll();
     initMobileMenu();
-    
     if (window.requestIdleCallback) {
-        window.requestIdleCallback(() => {
-            initGallery();
-            initTestimonials();
-        });
+        window.requestIdleCallback(() => { initGallery(); initTestimonials(); });
     } else {
-        setTimeout(() => {
-            initGallery();
-            initTestimonials();
-        }, 50);
+        setTimeout(() => { initGallery(); initTestimonials(); }, 50);
     }
 });
