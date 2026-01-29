@@ -36,7 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const menuIcon = mobileMenuToggle.querySelector('i');
 
         const toggleMenu = () => {
-            // Usa requestAnimationFrame para garantir suavidade na animação CSS
             window.requestAnimationFrame(() => {
                 const isActive = navMenu.classList.toggle('active');
                 if (menuIcon) {
@@ -55,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mobileMenuToggle.addEventListener('click', (e) => {
             e.stopPropagation();
             toggleMenu();
-        }, { passive: true }); // Passive melhora performance de toque
+        }, { passive: true });
 
         document.addEventListener('click', (e) => {
             if (navMenu.classList.contains('active') &&
@@ -65,7 +64,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Delegação de eventos para links internos
         navMenu.addEventListener('click', (e) => {
             if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
                 const targetId = e.target.getAttribute('href');
@@ -108,7 +106,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const startAutoPlay = () => {
             stopAutoPlay();
-            // Só inicia se estiver visível para não gastar CPU à toa
             if (!isVisible) return; 
             
             interval = setInterval(() => {
@@ -117,7 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 6000);
         };
 
-        // Observer: Pausa o slider quando sai da tela (Otimização crítica)
         if ('IntersectionObserver' in window) {
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
@@ -132,7 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
             startAutoPlay();
         }
 
-        // Pausa se o usuário mudar de aba
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) stopAutoPlay();
             else if (isVisible) startAutoPlay();
@@ -141,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
         buttons.forEach((btn, index) => {
             btn.addEventListener('click', () => {
                 updateSlider(index);
-                startAutoPlay(); // Reinicia o timer ao interagir
+                startAutoPlay();
             });
         });
 
@@ -152,21 +147,18 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ==========================================
-    // 4. GALERIA & LIGHTBOX (ZERO LAGGING)
+    // 4. GALERIA & LIGHTBOX (INTEGRAÇÃO GITHUB API)
     // ==========================================
-    const initGallery = () => {
-        const galleryData = [
-            { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639014/4_vo4miq.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639014/4_vo4miq.jpg', alt: 'Galeria 9' },
-            { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639015/5_qnak9q.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639015/5_qnak9q.jpg', alt: 'Galeria 5' },
-            { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639017/8_r6jqf9.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639017/8_r6jqf9.jpg', alt: 'Galeria 8' },
-            { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639016/6_xiamzn.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639016/6_xiamzn.jpg', alt: 'Galeria 4' },
-            { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639022/9_ajpiez.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639022/9_ajpiez.jpg', alt: 'Galeria 5' },
-            { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639014/3_cjou3m.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639014/3_cjou3m.jpg', alt: 'Galeria 6' },
-            { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639016/7_fi8npu.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639016/7_fi8npu.jpg', alt: 'Extra 1' },
-            { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639013/1_qnkqsb.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639013/1_qnkqsb.jpg', alt: 'Extra 2' },
-            { thumb: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639013/2_r30lbb.jpg', full: 'https://res.cloudinary.com/depfruu0c/image/upload/v1769639013/2_r30lbb.jpg', alt: 'Extra 3' },
-        ];
-        ];
+    const initGallery = async () => {
+        
+        // --- ⚠️ CONFIGURE AQUI SEUS DADOS ---
+        const REPO_CONFIG = {
+            owner: 'SEU_USUARIO_GITHUB',      // Ex: 'joao-dev'
+            repo: 'NOME_DO_REPOSITORIO',      // Ex: 'portfolio'
+            path: 'caminho/para/imagens',     // Ex: 'assets/img/gallery' (sem barra inicial)
+            branch: 'main'                    // ou 'master'
+        };
+        // -------------------------------------
 
         const elements = {
             grid: document.getElementById('galleryGrid'),
@@ -182,15 +174,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!elements.grid) return;
 
+        // Estado
+        let galleryData = [];
         let renderedCount = 0;
         let lightboxIndex = 0;
         const INITIAL_LOAD = 6;
         const LOAD_STEP = 3;
         const preloadedImages = new Set();
 
+        // 1. Fetch do GitHub
+        const fetchGitHubImages = async () => {
+            try {
+                // Se o botão existir, mostra status de carregando (opcional)
+                if(elements.loadBtn) elements.loadBtn.textContent = 'Carregando...';
+
+                const url = `https://api.github.com/repos/${REPO_CONFIG.owner}/${REPO_CONFIG.repo}/contents/${REPO_CONFIG.path}?ref=${REPO_CONFIG.branch}`;
+                
+                const response = await fetch(url);
+                if (!response.ok) {
+                    if (response.status === 404) throw new Error('Pasta não encontrada no repositório.');
+                    throw new Error('Erro ao conectar com GitHub.');
+                }
+                
+                const data = await response.json();
+
+                // Filtra e Mapeia
+                galleryData = data
+                    .filter(file => file.type === 'file' && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.name))
+                    .map(file => ({
+                        thumb: file.download_url, // URL Raw do GitHub
+                        full: file.download_url,
+                        alt: file.name.replace(/\.[^/.]+$/, "").replace(/-/g, " ")
+                    }));
+
+                if (galleryData.length === 0) {
+                    elements.grid.innerHTML = '<p style="text-align:center; color:#888;">Nenhuma imagem encontrada na pasta.</p>';
+                    if(elements.loadBtn) elements.loadBtn.style.display = 'none';
+                    return;
+                }
+
+                if(elements.loadBtn) elements.loadBtn.textContent = 'Carregar Mais';
+                
+                // Renderiza lote inicial
+                renderImages(INITIAL_LOAD);
+
+            } catch (error) {
+                console.error('GitHub Gallery Error:', error);
+                elements.grid.innerHTML = `<p style="text-align:center; color:#ff6b6b;">Erro ao carregar galeria.<br><small>${error.message}</small></p>`;
+                if(elements.loadBtn) elements.loadBtn.style.display = 'none';
+            }
+        };
+
         const preloadImage = (url) => {
             if (!url || preloadedImages.has(url)) return;
-            // Criação de imagem assíncrona que não bloqueia a thread principal
             const img = new Image();
             img.src = url;
             preloadedImages.add(url);
@@ -199,8 +235,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const renderImages = (count) => {
             const total = galleryData.length;
             const limit = Math.min(renderedCount + count, total);
-            
-            // DocumentFragment para evitar Reflow/Repaint múltiplo (Muito mais rápido)
             const fragment = document.createDocumentFragment();
 
             for (let i = renderedCount; i < limit; i++) {
@@ -222,17 +256,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 fragment.appendChild(card);
             }
 
-            // Apenas uma escrita no DOM real
             window.requestAnimationFrame(() => {
                 elements.grid.appendChild(fragment);
                 renderedCount = limit;
-                if (renderedCount >= total && elements.loadBtn) {
-                    elements.loadBtn.style.display = 'none';
+                if (elements.loadBtn) {
+                    elements.loadBtn.style.display = (renderedCount >= total) ? 'none' : 'inline-block';
                 }
             });
         };
 
-        // Event Delegation
+        // Event Delegation (Click no Grid)
         elements.grid.addEventListener('click', (e) => {
             const card = e.target.closest('.gallery-item');
             if (card) {
@@ -242,8 +275,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const updateLightbox = () => {
             const item = galleryData[lightboxIndex];
-            
-            // RAF garante que a UI atualize sem travar visualmente
+            if (!item) return;
+
             window.requestAnimationFrame(() => {
                 elements.modalImg.src = item.full;
                 elements.modalImg.alt = item.alt;
@@ -251,24 +284,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(elements.counter) elements.counter.textContent = `${lightboxIndex + 1} / ${galleryData.length}`;
                 
                 if(elements.dots) {
-                    Array.from(elements.dots.children).forEach((dot, i) => {
-                        if (i === lightboxIndex) dot.classList.add('active');
-                        else dot.classList.remove('active');
-                    });
+                    // Atualização visual dos dots
+                    const dotsArray = Array.from(elements.dots.children);
+                    // Segurança caso os dots não batam com os dados
+                    if (dotsArray.length === galleryData.length) {
+                        dotsArray.forEach((dot, i) => {
+                            if (i === lightboxIndex) dot.classList.add('active');
+                            else dot.classList.remove('active');
+                        });
+                    }
                 }
             });
 
-            // Preload vizinhos em background (sem bloquear UI)
+            // Preload vizinhos
             setTimeout(() => {
                 const total = galleryData.length;
-                preloadImage(galleryData[(lightboxIndex + 1) % total].full);
-                preloadImage(galleryData[(lightboxIndex - 1 + total) % total].full);
+                preloadImage(galleryData[(lightboxIndex + 1) % total]?.full);
+                preloadImage(galleryData[(lightboxIndex - 1 + total) % total]?.full);
             }, 100);
         };
 
         const openLightbox = (index) => {
             lightboxIndex = index;
-            renderDots(); // Renderiza dots apenas uma vez ao abrir
+            renderDots();
             updateLightbox();
             elements.modal.classList.add('active');
             document.body.style.overflow = 'hidden';
@@ -279,20 +317,19 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.style.overflow = '';
             setTimeout(() => {
                 if(!elements.modal.classList.contains('active')) {
-                    elements.modalImg.src = ''; // Limpa memória
+                    elements.modalImg.src = '';
                 }
             }, 300);
         };
 
         const renderDots = () => {
             if(!elements.dots) return;
-            // Verifica se já existem dots para não recriar desnecessariamente
-            if(elements.dots.childElementCount === galleryData.length) return;
-
+            elements.dots.innerHTML = '';
+            
             const fragment = document.createDocumentFragment();
             galleryData.forEach((_, i) => {
                 const dot = document.createElement('div');
-                dot.className = 'l-dot';
+                dot.className = (i === lightboxIndex) ? 'l-dot active' : 'l-dot';
                 dot.onclick = (e) => {
                     e.stopPropagation();
                     lightboxIndex = i;
@@ -300,11 +337,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 fragment.appendChild(dot);
             });
-            elements.dots.innerHTML = '';
             elements.dots.appendChild(fragment);
         };
 
-        // Listeners otimizados
+        // Listeners
         if(elements.loadBtn) elements.loadBtn.onclick = () => renderImages(LOAD_STEP);
         elements.closeBtn.onclick = closeLightbox;
         elements.prevBtn.onclick = (e) => { e.stopPropagation(); navigate(-1); };
@@ -326,15 +362,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'ArrowRight') navigate(1);
         });
 
-        // Carregamento inicial diferido para não bloquear o paint principal
-        setTimeout(() => renderImages(INITIAL_LOAD), 0);
+        // Inicia o processo
+        fetchGitHubImages();
     };
 
-    // EXECUÇÃO ORQUESTRADA (Evita travamento no load da página)
+    // ==========================================
+    // EXECUÇÃO ORQUESTRADA
+    // ==========================================
     initNavbarScroll();
     initMobileMenu();
     
-    // Deferir scripts não críticos
+    // Deferir scripts não críticos (Galeria e Testimonial)
     if (window.requestIdleCallback) {
         window.requestIdleCallback(() => {
             initGallery();
@@ -347,5 +385,3 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 50);
     }
 });
-
-
